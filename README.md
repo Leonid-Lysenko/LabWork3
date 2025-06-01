@@ -1,11 +1,11 @@
-## Список с пропусками (Skip List)
+## Skip List
 
-Реализация списка с пропусками (Skip List) на C++
+Implementing a Skip List in C++
 
-## Запуск
+## Launch
 
 make
 
-## Тестирование
+## Testing
 
 make test
