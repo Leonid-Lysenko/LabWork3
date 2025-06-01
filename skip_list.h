@@ -240,4 +240,234 @@ public:
         const SkipNode* current_node;
     };
 
+
+    SkipList(size_t height_limit = 16, double promotion_prob = 0.5, 
+             const Allocator& alloc = Allocator())
+        : max_height(height_limit), promotion_chance(promotion_prob),
+          current_height(1), item_count(0), data_allocator(alloc),
+          rng_engine(std::time(nullptr)), probability_dist(0.0, 1.0) {
+        
+        header = new SkipNode(KeyType(), ValueType(), nullptr, max_height);
+        terminator = new SkipNode(KeyType(), ValueType(), header, max_height);
+        
+        for (size_t lvl = 0; lvl < max_height; ++lvl) {
+            header->forward_links[lvl] = terminator;
+        }
+        terminator->back_link = header;
+    }
+
+    SkipList(std::initializer_list<std::pair<KeyType, ValueType>> init_list,
+             size_t height_limit = 16, double promotion_prob = 0.5)
+        : SkipList(height_limit, promotion_prob) {
+        for (const auto& pair : init_list) {
+            insert(pair.first, pair.second);
+        }
+    }
+
+    SkipList(const SkipList& other) 
+        : max_height(other.max_height), promotion_chance(other.promotion_chance),
+          current_height(1),
+          item_count(0),
+          rng_engine(std::time(nullptr)), probability_dist(0.0, 1.0),
+          data_allocator(other.data_allocator) {
+        
+        header = new SkipNode(KeyType(), ValueType(), nullptr, max_height);
+        terminator = new SkipNode(KeyType(), ValueType(), header, max_height);
+        
+        for (size_t lvl = 0; lvl < max_height; ++lvl) {
+            header->forward_links[lvl] = terminator;
+        }
+        
+        for (const auto& item : other) {
+            insert(item.first, item.second);
+        }
+    }
+
+    SkipList& operator=(const SkipList& other) {
+        if (this != &other) {
+            SkipList temp(other);
+            swap(temp);
+        }
+        
+        return *this;
+    }
+
+    ~SkipList() {
+        purge();
+        delete header;
+        delete terminator;
+    }
+
+    iterator begin() noexcept {
+        return iterator(this, header->forward_links[0] != terminator ? header->forward_links[0] : nullptr);
+    }
+
+    iterator end() noexcept {
+        return iterator(this, nullptr);
+    }
+
+    const_iterator begin() const noexcept {
+        return const_iterator(this, header->forward_links[0] != terminator ? header->forward_links[0] : nullptr);
+    }
+
+    const_iterator end() const noexcept {
+        return const_iterator(this, nullptr);
+    }
+
+    const_iterator cbegin() const noexcept {
+        return begin();
+    }
+
+    const_iterator cend() const noexcept {
+        return end();
+    }
+
+    void insert(const KeyType& new_key, const ValueType& new_value) {
+        auto predecessors = find_predecessors(new_key);
+        
+        if (predecessors[0]->forward_links[0] != terminator && 
+            predecessors[0]->forward_links[0]->node_key == new_key) {
+            predecessors[0]->forward_links[0]->node_value = new_value;
+            
+            return;
+        }
+        
+        size_t new_level = generate_random_level();
+        
+        if (new_level > current_height) {
+            predecessors.resize(new_level, header);
+            current_height = new_level;
+        }
+        
+        SkipNode* new_node = new SkipNode(new_key, new_value, predecessors[0], new_level);
+        
+        for (size_t lvl = 0; lvl < new_level; ++lvl) {
+            new_node->forward_links[lvl] = predecessors[lvl]->forward_links[lvl];
+            predecessors[lvl]->forward_links[lvl] = new_node;
+        }
+        
+        new_node->back_link = predecessors[0];
+        if (new_node->forward_links[0] != terminator) {
+            new_node->forward_links[0]->back_link = new_node;
+        } else {
+            terminator->back_link = new_node;
+        }
+        
+        item_count++;
+    }
+
+    void erase(const KeyType& key) {
+        auto predecessors = find_predecessors(key);
+        SkipNode* target = predecessors[0]->forward_links[0];
+        
+        if (target == terminator || target->node_key != key) return;
+        
+        for (size_t lvl = 0; lvl < target->forward_links.size(); ++lvl) {
+            if (predecessors[lvl]->forward_links[lvl] == target) {
+                predecessors[lvl]->forward_links[lvl] = target->forward_links[lvl];
+            }
+        }
+        
+        if (target->forward_links[0] != terminator) {
+            target->forward_links[0]->back_link = target->back_link;
+        } else {
+            terminator->back_link = target->back_link;
+        }
+        
+        delete target;
+        item_count--;
+        
+        while (current_height > 1 && header->forward_links[current_height-1] == terminator) {
+            current_height--;
+        }
+    }
+
+    iterator find(const KeyType& key) {
+        SkipNode* node = locate_node(key);
+        return iterator(this, node);
+    }
+
+    const_iterator find(const KeyType& key) const {
+        SkipNode* node = locate_node(key);
+        return const_iterator(this, node);
+    }
+
+    ValueType& operator[](const KeyType& key) {
+        SkipNode* node = locate_node(key);
+        if (!node) {
+            insert(key, ValueType());
+            node = locate_node(key);
+        }
+        
+        return node->node_value;
+    }
+
+    const ValueType& operator[](const KeyType& key) const {
+        return at(key);
+    }
+
+    const ValueType& at(const KeyType& key) const {
+        const SkipNode* node = locate_node(key);
+        if (!node) throw std::out_of_range("Key not found");
+        
+        return node->node_value;
+    }
+
+    size_t size() const noexcept {
+        return item_count;
+    }
+
+    bool empty() const noexcept {
+        return item_count == 0;
+    }
+
+    void purge() noexcept {
+        SkipNode* current = header->forward_links[0];
+        while (current != terminator) {
+            SkipNode* next = current->forward_links[0];
+            delete current;
+            current = next;
+        }
+        
+        for (size_t lvl = 0; lvl < max_height; ++lvl) {
+            header->forward_links[lvl] = terminator;
+        }
+        terminator->back_link = header;
+        
+        current_height = 1;
+        item_count = 0;
+    }
+
+    void swap(SkipList& other) noexcept {
+        std::swap(max_height, other.max_height);
+        std::swap(promotion_chance, other.promotion_chance);
+        std::swap(current_height, other.current_height);
+        std::swap(item_count, other.item_count);
+        std::swap(header, other.header);
+        std::swap(terminator, other.terminator);
+        std::swap(data_allocator, other.data_allocator);
+    }
+
+    friend bool operator==(const SkipList& lhs, const SkipList& rhs) {
+        if (lhs.size() != rhs.size()) return false;
+        
+        auto lit = lhs.begin();
+        auto rit = rhs.begin();
+        
+        while (lit != lhs.end() && rit != rhs.end()) {
+            if (lit.key() != rit.key() || *lit != *rit)
+            
+                return false;
+                
+            ++lit;
+            ++rit;
+        }
+        
+        return true;
+    }
+
+    friend bool operator!=(const SkipList& lhs, const SkipList& rhs) {
+        return !(lhs == rhs);
+    }
+
 };
