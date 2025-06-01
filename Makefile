@@ -1,5 +1,5 @@
 G = g++
-A = Lab1
+A = Lab4
 FLAGS = -std=c++17 -Werror -Wpedantic -Wall -g
 GTEST_FLAGS = -lgtest -lgtest_main -lpthread
 SRC = $(wildcard *.cpp)
