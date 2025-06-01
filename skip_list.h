@@ -155,4 +155,89 @@ public:
         SkipList* container;
         SkipNode* current_node;
     };
+
+    class const_iterator {
+    public:
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = const ValueType;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const ValueType*;
+        using reference = const ValueType&;
+    
+        const_iterator() : container(nullptr), current_node(nullptr) {}
+        const_iterator(const SkipList* cont, const SkipNode* node) 
+            : container(cont), current_node(node) {}
+    
+        const_iterator(const iterator& other) 
+            : container(other.container), current_node(other.current_node) {}
+
+        reference operator*() const {
+            if (!current_node || current_node == container->header) 
+                throw std::out_of_range("Invalid const_iterator dereference");
+                
+            return current_node->node_value;
+        }
+    
+        pointer operator->() const {
+            return &(operator*());
+        }
+
+        const_iterator& operator++() {
+            if (current_node) {
+                current_node = current_node->forward_links[0];
+                if (current_node == container->terminator) {
+                    current_node = nullptr;
+                }
+            }
+            
+            return *this;
+        }
+
+        const_iterator operator++(int) {
+            const_iterator temp = *this;
+            ++(*this);
+            
+            return temp;
+        }
+        
+        const_iterator& operator--() {
+            if (current_node) {
+                current_node = current_node->back_link;
+                if (current_node == container->header) {
+                    current_node = nullptr;
+                }
+            } else {
+                current_node = container->terminator->back_link;
+                if (current_node == container->header) {
+                    current_node = nullptr;
+                }
+            }
+            
+            return *this;
+        }
+
+        const_iterator operator--(int) {
+            const_iterator temp = *this;
+            --(*this);
+            return temp;
+        }
+
+        bool operator==(const const_iterator& other) const {
+            return current_node == other.current_node;
+        }
+
+        bool operator!=(const const_iterator& other) const {
+            return !(*this == other);
+        }
+   
+        const KeyType& key() const {
+            if (!current_node) throw std::out_of_range("Invalid key access");
+            return current_node->node_key;
+        }
+
+    private:
+        const SkipList* container;
+        const SkipNode* current_node;
+    };
+
 };
