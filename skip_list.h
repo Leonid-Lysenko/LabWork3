@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <memory>
 #include <initializer_list>
+#include <type_traits>
 
 template <typename KeyType, typename ValueType, typename Allocator = std::allocator<std::pair<const KeyType, ValueType>>>
 class SkipList {
@@ -19,21 +20,20 @@ private:
         std::vector<SkipNode*> forward_links;
         
         SkipNode(const KeyType& k, const ValueType& v, SkipNode* prev, size_t levels) 
-            : node_key(k),node_value(v), back_link(prev), forward_links(levels, nullptr) {}
+            : node_key(k), node_value(v), back_link(prev), forward_links(levels, nullptr) {}
     };
 
     size_t max_height;
+    double promotion_chance;
     size_t current_height;
     size_t item_count;
-    
-    double promotion_chance;
-    
-    SkipNode* header;
-    SkipNode* terminator;
     
     std::mt19937 rng_engine;
     std::uniform_real_distribution<> probability_dist;
     Allocator data_allocator;
+    
+    SkipNode* header;
+    SkipNode* terminator;
     
     size_t generate_random_level() {
         size_t lvl = 1;
@@ -154,6 +154,7 @@ public:
     private:
         SkipList* container;
         SkipNode* current_node;
+        friend class SkipList;
     };
 
     class const_iterator {
@@ -238,14 +239,21 @@ public:
     private:
         const SkipList* container;
         const SkipNode* current_node;
+        friend class SkipList;
     };
 
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     SkipList(size_t height_limit = 16, double promotion_prob = 0.5, 
              const Allocator& alloc = Allocator())
-        : max_height(height_limit), promotion_chance(promotion_prob),
-          current_height(1), item_count(0), data_allocator(alloc),
-          rng_engine(std::time(nullptr)), probability_dist(0.0, 1.0) {
+        : max_height(height_limit),
+          promotion_chance(promotion_prob),
+          current_height(1),
+          item_count(0),
+          rng_engine(std::time(nullptr)),
+          probability_dist(0.0, 1.0),
+          data_allocator(alloc) {
         
         header = new SkipNode(KeyType(), ValueType(), nullptr, max_height);
         terminator = new SkipNode(KeyType(), ValueType(), header, max_height);
@@ -265,10 +273,12 @@ public:
     }
 
     SkipList(const SkipList& other) 
-        : max_height(other.max_height), promotion_chance(other.promotion_chance),
+        : max_height(other.max_height),
+          promotion_chance(other.promotion_chance),
           current_height(1),
           item_count(0),
-          rng_engine(std::time(nullptr)), probability_dist(0.0, 1.0),
+          rng_engine(std::time(nullptr)),
+          probability_dist(0.0, 1.0),
           data_allocator(other.data_allocator) {
         
         header = new SkipNode(KeyType(), ValueType(), nullptr, max_height);
@@ -278,8 +288,8 @@ public:
             header->forward_links[lvl] = terminator;
         }
         
-        for (const auto& item : other) {
-            insert(item.first, item.second);
+        for (auto it = other.begin(); it != other.end(); ++it) {
+            insert(it.key(), *it);
         }
     }
 
@@ -320,6 +330,30 @@ public:
 
     const_iterator cend() const noexcept {
         return end();
+    }
+
+    reverse_iterator rbegin() noexcept {
+        return reverse_iterator(end());
+    }
+
+    reverse_iterator rend() noexcept {
+        return reverse_iterator(begin());
+    }
+
+    const_reverse_iterator rbegin() const noexcept {
+        return const_reverse_iterator(end());
+    }
+
+    const_reverse_iterator rend() const noexcept {
+        return const_reverse_iterator(begin());
+    }
+
+    const_reverse_iterator crbegin() const noexcept {
+        return const_reverse_iterator(end());
+    }
+
+    const_reverse_iterator crend() const noexcept {
+        return const_reverse_iterator(begin());
     }
 
     void insert(const KeyType& new_key, const ValueType& new_value) {
@@ -448,6 +482,36 @@ public:
         std::swap(data_allocator, other.data_allocator);
     }
 
+    friend bool operator<(const SkipList& lhs, const SkipList& rhs) {
+        auto lhs_it = lhs.begin();
+        auto rhs_it = rhs.begin();
+    
+        while (lhs_it != lhs.end() && rhs_it != rhs.end()) {
+            if (lhs_it.key() < rhs_it.key()) return true;
+            if (rhs_it.key() < lhs_it.key()) return false;
+        
+            if (*lhs_it < *rhs_it) return true;
+            if (*rhs_it < *lhs_it) return false;
+        
+            ++lhs_it;
+            ++rhs_it;
+        }
+
+        return lhs.size() < rhs.size();
+    }
+
+    friend bool operator>(const SkipList& lhs, const SkipList& rhs) {
+        return rhs < lhs;
+    }
+
+    friend bool operator<=(const SkipList& lhs, const SkipList& rhs) {
+        return !(rhs < lhs);
+    }
+    
+    friend bool operator>=(const SkipList& lhs, const SkipList& rhs) {
+        return !(lhs < rhs);
+    }
+
     friend bool operator==(const SkipList& lhs, const SkipList& rhs) {
         if (lhs.size() != rhs.size()) return false;
         
@@ -455,14 +519,13 @@ public:
         auto rit = rhs.begin();
         
         while (lit != lhs.end() && rit != rhs.end()) {
-            if (lit.key() != rit.key() || *lit != *rit)
-            
+            if (*lit != *rit)
                 return false;
-                
+            
             ++lit;
             ++rit;
         }
-        
+    
         return true;
     }
 
