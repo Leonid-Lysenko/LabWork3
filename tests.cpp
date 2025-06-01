@@ -1,15 +1,27 @@
+/* Leonid Lysenko st128618@student.spbu.ru
+   Lab3
+*/
+
 #include <gtest/gtest.h>
 #include "skip_list.h"
 #include <string>
 #include <vector>
 #include <algorithm>
 
+/**
+ * @brief Tests default construction of SkipList.
+ * Verifies that a newly created SkipList is empty and size is zero.
+ */
 TEST(SkipListTest, DefaultConstructor) {
     SkipList<int, std::string> sl;
     EXPECT_TRUE(sl.empty());
     EXPECT_EQ(sl.size(), 0);
 }
 
+/**
+ * @brief Tests construction of SkipList from initializer list.
+ * Checks that elements are correctly inserted and accessible.
+ */
 TEST(SkipListTest, InitializerListConstructor) {
     SkipList<int, std::string> sl = {
         {1, "first"},
@@ -22,6 +34,10 @@ TEST(SkipListTest, InitializerListConstructor) {
     EXPECT_EQ(sl[3], "third");
 }
 
+/**
+ * @brief Tests insertion and access of elements.
+ * Verifies that inserting existing keys updates values without changing size.
+ */
 TEST(SkipListTest, InsertAndAccess) {
     SkipList<int, int> sl;
     sl.insert(1, 100);
@@ -36,6 +52,10 @@ TEST(SkipListTest, InsertAndAccess) {
     EXPECT_EQ(sl[1], 150);
 }
 
+/**
+ * @brief Tests operator[] for insertion and access.
+ * Checks both mutable and const access.
+ */
 TEST(SkipListTest, OperatorBrackets) {
     SkipList<int, bool> sl;
     sl[1] = true;
@@ -48,6 +68,10 @@ TEST(SkipListTest, OperatorBrackets) {
     EXPECT_EQ(csl[1], true);
 }
 
+/**
+ * @brief Tests at() method for element access with bounds checking.
+ * Verifies correct retrieval and exception throwing for missing keys.
+ */
 TEST(SkipListTest, AtMethod) {
     SkipList<int, double> sl;
     sl.insert(1, 3.14);
@@ -60,6 +84,10 @@ TEST(SkipListTest, AtMethod) {
     EXPECT_THROW(csl.at(99), std::out_of_range);
 }
 
+/**
+ * @brief Tests erasing elements by key.
+ * Checks size adjustment and that erasing non-existent keys has no effect.
+ */
 TEST(SkipListTest, Erase) {
     SkipList<int, char> sl = {
         {1, 'A'},
@@ -77,6 +105,10 @@ TEST(SkipListTest, Erase) {
     EXPECT_EQ(sl.size(), 2);
 }
 
+/**
+ * @brief Tests find() method for locating elements.
+ * Verifies iterator correctness for found and not found keys.
+ */
 TEST(SkipListTest, Find) {
     SkipList<int, int> sl = {
         {1, 10},
@@ -96,6 +128,10 @@ TEST(SkipListTest, Find) {
     EXPECT_EQ(*cit, 20);
 }
 
+/**
+ * @brief Tests iteration over SkipList elements.
+ * Confirms iteration order and correctness of values.
+ */
 TEST(SkipListTest, Iteration) {
     SkipList<int, int> sl = {
         {1, 10},
@@ -114,6 +150,10 @@ TEST(SkipListTest, Iteration) {
     EXPECT_EQ(values[2], 30);
 }
 
+/**
+ * @brief Tests const iteration over SkipList elements.
+ * Ensures const correctness and iteration order.
+ */
 TEST(SkipListTest, ConstIteration) {
     const SkipList<int, int> sl = {
         {1, 100},
@@ -130,6 +170,10 @@ TEST(SkipListTest, ConstIteration) {
     EXPECT_EQ(values[1], 200);
 }
 
+/**
+ * @brief Tests reverse iteration over SkipList.
+ * Checks correctness of reverse order traversal.
+ */
 TEST(SkipListTest, ReverseIteration) {
     SkipList<int, int> sl = {
         {1, 10},
@@ -147,6 +191,10 @@ TEST(SkipListTest, ReverseIteration) {
     EXPECT_EQ(it, sl.begin());
 }
 
+/**
+ * @brief Tests copy constructor of SkipList.
+ * Verifies that the copy has the same elements and size.
+ */
 TEST(SkipListTest, CopyConstructor) {
     SkipList<int, int> sl1 = {
         {1, 1},
@@ -160,6 +208,10 @@ TEST(SkipListTest, CopyConstructor) {
     EXPECT_EQ(sl1[2], sl2[2]);
 }
 
+/**
+ * @brief Tests copy assignment operator.
+ * Checks that assigned SkipList matches the source.
+ */
 TEST(SkipListTest, AssignmentOperator) {
     SkipList<int, int> sl1 = {
         {1, 1},
@@ -174,6 +226,10 @@ TEST(SkipListTest, AssignmentOperator) {
     EXPECT_EQ(sl1[2], sl2[2]);
 }
 
+/**
+ * @brief Tests swap operation between two SkipLists.
+ * Verifies that contents are exchanged correctly.
+ */
 TEST(SkipListTest, Swap) {
     SkipList<int, int> sl1 = {{1, 1}};
     SkipList<int, int> sl2 = {{2, 2}};
@@ -186,6 +242,10 @@ TEST(SkipListTest, Swap) {
     EXPECT_EQ(sl2[1], 1);
 }
 
+/**
+ * @brief Tests clearing all elements via purge().
+ * Ensures SkipList becomes empty with size zero.
+ */
 TEST(SkipListTest, Clear) {
     SkipList<int, int> sl = {
         {1, 1},
@@ -197,6 +257,10 @@ TEST(SkipListTest, Clear) {
     EXPECT_EQ(sl.size(), 0);
 }
 
+/**
+ * @brief Tests comparison operators for equality and inequality.
+ * Checks correctness of operator== and operator!=.
+ */
 TEST(SkipListTest, ComparisonOperators) {
     SkipList<int, int> sl1 = {{1, 1}, {2, 2}};
     SkipList<int, int> sl2 = {{1, 1}, {2, 2}};
@@ -208,6 +272,10 @@ TEST(SkipListTest, ComparisonOperators) {
     EXPECT_FALSE(sl1 == sl3);
 }
 
+/**
+ * @brief Tests iterator validity after insertions and erasures.
+ * Ensures iterators remain valid and point to correct elements.
+ */
 TEST(SkipListTest, IteratorValidity) {
     SkipList<int, int> sl = {{1, 100}};
     auto it = sl.begin();
@@ -220,6 +288,10 @@ TEST(SkipListTest, IteratorValidity) {
     EXPECT_EQ(*it, 200);
 }
 
+/**
+ * @brief Tests usage of SkipList with a custom allocator.
+ * Verifies insertion and access with custom allocator type.
+ */
 TEST(SkipListTest, CustomAllocator) {
     using CustomAlloc = std::allocator<std::pair<const int, double>>;
     SkipList<int, double, CustomAlloc> sl;
@@ -229,6 +301,10 @@ TEST(SkipListTest, CustomAllocator) {
     EXPECT_DOUBLE_EQ(sl[1], 3.14159);
 }
 
+/**
+ * @brief Stress test with large number of insertions and deletions.
+ * Checks correctness and performance under heavy usage.
+ */
 TEST(SkipListTest, StressTest) {
     SkipList<int, int> sl;
     const int N = 1000;
@@ -254,6 +330,10 @@ TEST(SkipListTest, StressTest) {
     }
 }
 
+/**
+ * @brief Tests reverse iterators for correctness of traversal.
+ * Verifies reverse iteration order and values.
+ */
 TEST(SkipListTest, ReverseIterators) {
     SkipList<int, std::string> sl = {
         {1, "one"},
@@ -272,6 +352,10 @@ TEST(SkipListTest, ReverseIterators) {
     EXPECT_EQ(reversed_values[2], "one");
 }
 
+/**
+ * @brief Tests const reverse iterators for correctness.
+ * Ensures reverse traversal works on const SkipList.
+ */
 TEST(SkipListTest, ConstReverseIterators) {
     const SkipList<int, std::string> sl = {
         {1, "first"},
@@ -288,6 +372,10 @@ TEST(SkipListTest, ConstReverseIterators) {
     EXPECT_EQ(values[1], "first");
 }
 
+/**
+ * @brief Tests reverse iterator operations including increment and decrement.
+ * Checks correctness of operator++, operator--, post-increment and post-decrement.
+ */
 TEST(SkipListTest, ReverseIteratorOperations) {
     SkipList<int, int> sl = {{1, 10}, {2, 20}, {3, 30}};
     
@@ -307,6 +395,10 @@ TEST(SkipListTest, ReverseIteratorOperations) {
     EXPECT_EQ(*rit, 30);
 }
 
+/**
+ * @brief Tests detailed comparison operators for various SkipList instances.
+ * Verifies relational operators <, >, <=, >=, ==, != with different keys and values.
+ */
 TEST(SkipListTest, ComparisonOperatorsDetailed) {
     SkipList<int, int> sl1 = {{1, 10}, {2, 20}};
     SkipList<int, int> sl2 = {{1, 10}, {2, 20}};
@@ -339,6 +431,10 @@ TEST(SkipListTest, ComparisonOperatorsDetailed) {
     EXPECT_FALSE(sl5 >= sl1);
 }
 
+/**
+ * @brief Tests reverse iterator edge cases on empty and single-element SkipList.
+ * Checks that reverse iterators behave correctly at boundaries.
+ */
 TEST(SkipListTest, ReverseIteratorEdgeCases) {
     SkipList<int, int> empty;
     EXPECT_EQ(empty.rbegin(), empty.rend());
@@ -351,6 +447,10 @@ TEST(SkipListTest, ReverseIteratorEdgeCases) {
     EXPECT_EQ(rit, single.rend());
 }
 
+/**
+ * @brief Tests comparison operators with SkipLists of different sizes.
+ * Verifies relational operators behave correctly when sizes differ.
+ */
 TEST(SkipListTest, ComparisonWithDifferentSizes) {
     SkipList<int, int> sl1 = {{1, 10}};
     SkipList<int, int> sl2 = {{1, 10}, {2, 20}};
@@ -369,3 +469,4 @@ int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
