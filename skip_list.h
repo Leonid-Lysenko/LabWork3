@@ -1,4 +1,5 @@
 #pragma once
+
 #include <algorithm>
 #include <vector>
 #include <random>
@@ -7,8 +8,7 @@
 #include <memory>
 #include <initializer_list>
 
-template <typename KeyType, typename ValueType, 
-          typename Allocator = std::allocator<std::pair<const KeyType, ValueType>>>
+template <typename KeyType, typename ValueType, typename Allocator = std::allocator<std::pair<const KeyType, ValueType>>>
 class SkipList {
 private:
     struct SkipNode {
@@ -73,4 +73,86 @@ private:
         return preds;
     }
 
+public:
+    class iterator {
+    public:
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = ValueType;
+        using difference_type = std::ptrdiff_t;
+        using pointer = ValueType*;
+        using reference = ValueType&;
+
+        iterator() : container(nullptr), current_node(nullptr) {}
+        iterator(SkipList* cont, SkipNode* node) : container(cont), current_node(node) {}
+
+        reference operator*() const {
+            if (!current_node || current_node == container->header) 
+                throw std::out_of_range("Invalid iterator dereference");
+                
+            return current_node->node_value;
+        }
+
+        pointer operator->() const {
+            return &(operator*());
+        }
+
+        iterator& operator++() {
+            if (current_node) {
+                current_node = current_node->forward_links[0];
+                if (current_node == container->terminator) {
+                    current_node = nullptr;
+                }
+            }
+            
+            return *this;
+        }
+
+        iterator operator++(int) {
+            iterator temp = *this;
+            ++(*this);
+            
+            return temp;
+        }
+
+        iterator& operator--() {
+            if (current_node) {
+                current_node = current_node->back_link;
+                if (current_node == container->header) {
+                    current_node = nullptr;
+                }
+            } else {
+                current_node = container->terminator->back_link;
+                if (current_node == container->header) {
+                    current_node = nullptr;
+                }
+            }
+            
+            return *this;
+        }
+
+        iterator operator--(int) {
+            iterator temp = *this;
+            --(*this);
+            
+            return temp;
+        }
+
+        bool operator==(const iterator& other) const {
+            return current_node == other.current_node;
+        }
+
+        bool operator!=(const iterator& other) const {
+            return !(*this == other);
+        }
+
+        KeyType key() const {
+            if (!current_node) throw std::out_of_range("Invalid key access");
+            
+            return current_node->node_key;
+        }
+
+    private:
+        SkipList* container;
+        SkipNode* current_node;
+    };
 };
